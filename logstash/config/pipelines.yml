@@ -1,0 +1,8 @@
+- pipeline.id: pg-cursos
+  path.config: "/usr/share/logstash/pipeline/logstash-pg-cursos.config"
+
+- pipeline.id: pg-disciplinas
+  path.config: "/usr/share/logstash/pipeline/logstash-pg-disciplinas.config"
+
+- pipeline.id: pg-perfis
+  path.config: "/usr/share/logstash/pipeline/logstash-pg-perfis.config"
