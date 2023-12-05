@@ -178,4 +178,4 @@ Para finalizar e remover os containers, basta executar
 
 ## License
 
-Esse repositório foi criado pelo [WebTech PUC Minas](https://github.com/webtech-pucminas), um grupo voltado para a criação de aplicações, ferramentas e conteúdo para interessados em criar soluções praa a plataforma Web.
+Esse repositório foi criado pelo [WebTech PUC Minas](https://github.com/webtech-pucminas), um grupo voltado para a criação de aplicações, ferramentas e conteúdo para interessados em  soluções para a plataforma Web.
