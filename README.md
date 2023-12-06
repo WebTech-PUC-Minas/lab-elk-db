@@ -46,10 +46,407 @@ server.host: "0.0.0.0"
 elasticsearch.hosts: ["http://elasticsearch:9200"]
 ```
 
-## Elasticsearch
+## Elasticsearch - Query DSL (Domain Specific Language)
 
-- ### queries
-  - texto
+https://www.elastic.co/guide/en/elasticsearch/client/javascript-api/current/api-reference.html
+
+
+### Filter
+
+Num contexto de filtro, uma cláusula de consulta responde à pergunta "Este documento corresponde a esta cláusula de consulta?" A resposta é um simples sim ou não.
+
+**POST=>http://localhost:9200/_search**
+
+**Mandar**
+
+``` JSON
+{
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "range": { // distância
+            "atualizado_em": {
+              "gte": "2021-12-24", // inicio
+              "lte": "2021-12-30" // fim
+            }
+          }
+        },
+        {
+          "term": {
+            "dsc_titulo_curso": "qualidade"
+          }
+        }
+      ]
+    }
+  }
+}
+
+```
+
+**Resposta**
+
+``` JSON
+{
+	"took": 2,
+	"timed_out": false,
+	"_shards": {
+		"total": 1,
+		"successful": 1,
+		"skipped": 0,
+		"failed": 0
+	},
+	"hits": {
+		"total": {
+			"value": 1,
+			"relation": "eq"
+		},
+		"max_score": 0.0,
+		"hits": [
+			{
+				"_index": "cursos",
+				"_id": "41",
+				"_score": 0.0,
+				"_ignored": [
+					"dsc_publico_alvo.keyword",
+					"dsc_texto_disciplinas.keyword",
+					"dsc_texto_divulgacao.keyword",
+					"dsc_justificativa.keyword",
+					"dsc_metodologia.keyword",
+					"dsc_objetivos.keyword"
+				],
+				"_source": {
+					"dsc_titulo_curso": "Engenharia de Qualidade e Teste de Software ",
+					"dsc_publico_alvo": "{...}",
+					"@version": "1",
+					"ind_modalidade": 3,
+					"id_projeto": 70,
+					"criado_em": "2021-12-24T17:53:11.165Z",
+					"ativo": true
+				}
+			}
+		]
+	}
+}
+
+```
+
+### Query compostas
+
+Bool Query combina consultas com operadores lógicos AND, OR e NOT. Permite criar consultas mais complexas combinando múltiplas condições.
+
+| Tipo |	Descrição |
+|------|-------------|
+| must | A cláusula (consulta) deverá constar nos documentos correspondentes e contribuirá para a pontuação. |
+| filter | A cláusula (consulta) deve aparecer nos documentos correspondentes. No entanto, ao contrário do que deve ser, a pontuação da consulta será ignorada. As cláusulas de filtro são executadas no contexto de filtro, o que significa que a pontuação é ignorada e as cláusulas são consideradas para armazenamento em cache. |
+| should | A cláusula (consulta) deve aparecer no documento correspondente. |
+| must_not | A cláusula (consulta) não deve constar nos documentos correspondentes. As cláusulas são executadas no contexto do filtro, o que significa que a pontuação é ignorada e as cláusulas são consideradas para armazenamento em cache. Como a pontuação é ignorada, é retornada uma pontuação 0 para todos os documentos. |
+
+**POST=>http://localhost:9200/cursos/_search**
+
+**Mandar**
+
+``` JSON
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "atualizado_em": {
+              "gte": "2021-12-24",
+              "lte": "2021-12-30"
+            }
+          }
+        },
+        {
+          "term": {
+            "dsc_titulo_curso": "qualidade"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+**Resposta**
+
+``` JSON
+{
+	"took": 7,
+	"timed_out": false,
+	"_shards": {
+		"total": 1,
+		"successful": 1,
+		"skipped": 0,
+		"failed": 0
+	},
+	"hits": {
+		"total": {
+			"value": 1,
+			"relation": "eq"
+		},
+		"max_score": 3.4766543,
+		"hits": [
+			{
+				"_index": "cursos",
+				"_id": "41",
+				"_score": 3.4766543, // score
+				"_ignored": [
+					"dsc_publico_alvo.keyword",
+					"dsc_texto_disciplinas.keyword",
+					"dsc_texto_divulgacao.keyword",
+					"dsc_justificativa.keyword",
+					"dsc_metodologia.keyword",
+					"dsc_objetivos.keyword"
+				],
+				"_source": {
+					"dsc_titulo_curso": "Engenharia de Qualidade e Teste de Software ",
+					"dsc_publico_alvo": "{...}",
+					"publicado": true,
+					"atualizado_em": "2021-12-24T17:53:11.165Z",
+					"url_site": "https://www.pucminas.br/Pos-Graduacao/IEC/Cursos/Paginas/Engenharia%20de%20Qualidade%20e%20Teste%20de%20Software_Pos%20Online_Especializacao%20e%20Master.aspx?pageID=4585&moda=5&modaTipo=2&polo=40&curso=1634&situ=1",
+					"id_oferta": 212,
+					"dsc_justificativa": "{...}",
+					"@version": "1",
+					"ind_modalidade": 3,
+					"id_projeto": 70,
+					"criado_em": "2021-12-24T17:53:11.165Z",
+					"ativo": true
+				}
+			}
+		]
+	}
+}
+```
+
+### Full text queries
+
+Mas as consultas de texto completo são muito poderosas e possuem algumas outras variações, incluindo `match_phrase`, `match_phrase_prefix`,
+`multi_match`, `common_terms`, `query_string` e `simple_query_string`.
+
+Observe como limitamos as propriedades do _source do documento para retornar apenas o campo de título. As outras variações do termo
+consultas de nível incluem `terms`, `range`, `exists`, `prefix`, `wildcard`, `regexp`, `fuzzy`, `type` e `ids`.
+
+**POST=>http://localhost:9200/perfis/_search**
+
+**Mandar**
+
+``` JSON
+{
+	"_source":["dsc_titulo"],
+	"query":{
+		"wildcard":{
+			"dsc_responsabilidades":"mine*"
+		}
+	}
+}
+```
+
+**Resposta**
+
+``` JSON
+{
+	"took": 3,
+	"timed_out": false,
+	"_shards": {
+		"total": 1,
+		"successful": 1,
+		"skipped": 0,
+		"failed": 0
+	},
+	"hits": {
+		"total": {
+			"value": 2,
+			"relation": "eq"
+		},
+		"max_score": 1.0,
+		"hits": [
+			{
+				"_index": "perfis",
+				"_id": "4",
+				"_score": 1.0,
+				"_source": {
+					"dsc_titulo": "Engenheiro de Machine Learning"
+				}
+			},
+			{
+				"_index": "perfis",
+				"_id": "1",
+				"_score": 1.0,
+				"_ignored": [
+					"dsc_descricao.keyword",
+					"dsc_responsabilidades.keyword"
+				],
+				"_source": {
+					"dsc_titulo": "Cientista de Dados"
+				}
+			}
+		]
+	}
+}
+```
+
+### Geo queries
+
+O Elasticsearch oferece suporte a dois tipos de dados geográficos: campos geo_point, que suportam pares lat/lon, e campos geo_shape, que suportam pontos, linhas, círculos, polígonos, multipolígonos, etc.
+
+### Shape queries
+
+O Elasticsearch oferece suporte a dois tipos de dados cartesianos: campos de pontos, que suportam pares x/y, e campos de forma, que suportam pontos, linhas, círculos, polígonos, multipolígonos, etc.
+
+### Joining queries
+
+`nested query`
+
+Os documentos podem conter campos do tipo aninhados. Esses campos são usados para indexar arrays de objetos, onde cada objeto pode ser consultado (com a consulta aninhada) como um documento independente.
+
+`has_child and has_parent queries`
+
+Um relacionamento de campo de junção pode existir entre documentos em um único índice. A consulta has_child retorna documentos pai cujos documentos filho correspondem à consulta especificada, enquanto a consulta has_parent retorna documentos filho cujo documento pai corresponde à consulta especificada.
+
+`parent id query`
+
+Retorna documentos filho associados a um documento pai específico. Você pode usar um mapeamento de campo de junção para criar relacionamentos pai-filho entre documentos no mesmo índice.
+
+### Match all
+
+index: cursos, disciplinas e perfis.
+
+**POST=>http://localhost:9200/{index}/_search**
+
+``` JSON
+{
+	"query":{
+		"match_all":{
+		}
+	}
+}
+```
+
+**POST=>http://localhost:9200/_search**
+
+``` JSON
+{
+	"field":"value" // todos os campos e valores do índice
+}
+```
+
+### Span queries
+
+As consultas span são consultas posicionais de baixo nível que fornecem controle especializado sobre a ordem e a proximidade dos termos especificados. Normalmente são usados para implementar consultas muito específicas sobre documentos legais ou patentes.
+
+Só é permitido definir boost em uma consulta de extensão externa. Consultas de intervalo composto, como span_near, usam apenas a lista de intervalos correspondentes de consultas de intervalo interno para encontrar seus próprios intervalos, que eles usam para produzir uma pontuação. As pontuações nunca são calculadas em consultas de intervalo interno, e é por isso que os reforços não são permitidos: eles apenas influenciam a forma como as pontuações são calculadas, não os intervalos.
+
+### Specialized queries
+
+Este grupo contém consultas que não se enquadram nos outros grupos: `distance_feature query`, `more_like_this query`, `percolate query`, `rank_feature query`, `script query`, `script_score query`, `wrapper query`, `pinned query`, `rule query`.
+
+#### Percolate Query
+
+O campo _percolator_document_slot indica qual documento correspondeu a esta consulta. Útil ao filtrar vários documentos simultaneamente.
+
+### Term-lvel queries
+
+Você pode usar consultas em nível de termo para localizar documentos com base em valores precisos em dados estruturados. Exemplos de dados estruturados incluem intervalos de datas, endereços IP, preços ou IDs de produtos.
+
+Ao contrário das consultas de texto completo, as consultas em nível de termo não analisam os termos de pesquisa. Em vez disso, as consultas em nível de termo correspondem aos termos exatos armazenados em um campo.
+
+Tipos de term-level queries: `exists query`, `fuzzy query`, `ids query`, `prefix query`, `range query`, `regexp query`, `term query`, `terms query`, `terms_set query`, `wildcard query`
+
+#### Fuzzy Query
+
+A Consulta Difusa é útil quando você deseja encontrar termos ortograficamente semelhantes, mas não idênticos, ao seu termo de pesquisa.
+
+Retorna documentos que contêm termos semelhantes ao termo de pesquisa, conforme medido por uma distância de edição de Levenshtein.
+
+Uma distância de edição é o número de alterações de um caractere necessárias para transformar um termo em outro. Essas mudanças podem incluir:
+
+Mudando um caractere (caixa → faixa)
+Removendo um caractere (gato → ato)
+Inserindo um caractere (doente → doeente)
+Transpondo dois personagens adjacentes (comida → comdia)
+
+Para encontrar termos semelhantes, a consulta difusa cria um conjunto de todas as variações ou expansões possíveis do termo de pesquisa dentro de uma distância de edição especificada. A consulta então retorna correspondências exatas para cada expansão.
+
+**Require**
+
+**POST=>http://localhost:9200/disciplinas/_search**
+
+Example: redes => reds
+
+``` JSON
+{
+  "query": {
+    "fuzzy": {
+      "dsc_nome_disciplina": {
+        "value": "reds",
+        "fuzziness": 2
+      }
+    }
+  }
+}
+```
+
+**Response**
+
+``` JSON
+{
+	"took": 8,
+	"timed_out": false,
+	"_shards": {
+		"total": 1,
+		"successful": 1,
+		"skipped": 0,
+		"failed": 0
+	},
+	"hits": {
+		"total": {
+			"value": 8,
+			"relation": "eq"
+		},
+		"max_score": 2.748603,
+		"hits": [
+			{
+				"_index": "disciplinas",
+				"_id": "58",
+				"_score": 2.748603,
+				"_source": {
+					"dsc_ementa": "Taxonomia de redes neurais. Redes neurais recorrentes, convolutivas, e redes de memória dinâmica. Aplicações e modelagem de problemas.",
+					"dsc_sigla": "RNA",
+					"dsc_nome_disciplina": "REDES NEURAIS E APRENDIZAGEM PROFUNDA ", // possui nome redes
+					"@version": "1",
+					"num_carga_horaria_to": null,
+					"@timestamp": "2023-11-22T17:25:00.847Z",
+					"atualizado_em": "2023-10-06T01:34:42.625Z",
+					"id_disciplina": 58,
+					"criado_em": "2021-12-24T17:53:41.755Z",
+					"id_grupo_disciplina": 7,
+					"num_carga_horaria": 24,
+					"dsc_grupo_disciplina": "INTELIGÊNCIA ARTIFICIAL"
+				}
+			}
+		]
+	}
+}
+```
+
+### Text expansion
+
+A consulta de text expansion usa um modelo de processamento de linguagem natural para converter o texto da consulta em uma lista de pares de peso de token que são então usados em uma consulta em um vetor esparso ou campo de recursos de classificação.
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-text-expansion-query.html
+
+Tutorial: semantic search with ELSER
+
+https://www.elastic.co/guide/en/elasticsearch/reference/8.11/semantic-search-elser.html
+
+ELSER – Elastic Learned Sparse EncodeR
+
+https://www.elastic.co/guide/en/machine-learning/8.11/ml-nlp-elser.html
+
+ELSER é um modelo fora de domínio, o que significa que não requer ajuste fino em seus próprios dados, tornando-o adaptável para vários casos de uso prontos para uso.
 
 
 ## Variáveis de ambiente
